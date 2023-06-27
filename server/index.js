@@ -14,7 +14,12 @@ const fs = require('fs');
 const salt = bcrypt.genSaltSync(10);
 const secret = 'asdfe45we45w345wegw345werjktjwertkj';
 
-app.use(cors({credentials:true}));
+const corsOptions ={
+  origin: ['*','http://localhost:3000'], 
+  credentials:true,            //access-control-allow-credentials:true
+  optionSuccessStatus:200,
+}
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(__dirname + '/uploads'));
@@ -44,7 +49,7 @@ app.post('/login', async (req,res) => {
   if (passOk) {
     // logged in
     jwt.sign({username,id:userDoc._id}, secret, {}, (err,token) => {
-      if (err) throw err;
+      if (err) res.status(401).json(err);
       res.cookie('token', token).json({
         id:userDoc._id,
         username,
@@ -57,8 +62,9 @@ app.post('/login', async (req,res) => {
 
 app.get('/profile', (req,res) => {
   const {token} = req.cookies;
+
   jwt.verify(token, secret, {}, (err,info) => {
-    if (err) throw err;
+    if (err) res.status(401).json(err);
     res.json(info);
   });
 });
@@ -76,7 +82,7 @@ app.post('/post', uploadMiddleware.single('file'), async (req,res) => {
 
   const {token} = req.cookies;
   jwt.verify(token, secret, {}, async (err,info) => {
-    if (err) throw err;
+    if (err) res.status(401).json(err);
     const {title,summary,content} = req.body;
     const postDoc = await Post.create({
       title,
@@ -102,7 +108,7 @@ app.put('/post',uploadMiddleware.single('file'), async (req,res) => {
 
   const {token} = req.cookies;
   jwt.verify(token, secret, {}, async (err,info) => {
-    if (err) throw err;
+    if (err) res.status(401).json(err);
     const {id,title,summary,content} = req.body;
     const postDoc = await Post.findById(id);
     const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
